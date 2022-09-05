@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func dirwalk(dir string) []string {
@@ -38,9 +39,10 @@ func readCsv(path string, rownum int) []string {
 	if err != nil {
 		panic(err)
 	}
+	println(path)
 	var res []string
 	for _, v := range rows {
-		fmt.Println(v[rownum])
+		//fmt.Println(v[rownum])
 		res = append(res, v[rownum])
 	}
 	return res
@@ -66,10 +68,15 @@ func main() {
 
 	var fullData [][]string
 	paths := dirwalk(path)
+	var flag bool
 	for i := 0; i < len(paths); i++ {
-		if i == 0 {
+		if strings.Index(paths[i], "._") != -1 {
+			continue
+		}
+		if flag == false {
 			fullData = append(fullData, readCsv(paths[i], 0))
 		}
+		flag = true
 		fullData = append(fullData, readCsv(paths[i], 1))
 	}
 
