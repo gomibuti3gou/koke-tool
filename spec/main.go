@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/cheggaaa/pb/v3"
 )
 
 func dirwalk(dir string) []string {
@@ -37,9 +39,10 @@ func readCsv(path string, rownum int) []string {
 	r := csv.NewReader(file)
 	rows, err := r.ReadAll()
 	if err != nil {
+		println(path)
 		panic(err)
 	}
-	println(path)
+
 	var res []string
 	for _, v := range rows {
 		//fmt.Println(v[rownum])
@@ -69,7 +72,12 @@ func main() {
 	var fullData [][]string
 	paths := dirwalk(path)
 	var flag bool
+
+	bar := pb.Simple.Start(len(paths))
+	bar.SetMaxWidth(80)
+
 	for i := 0; i < len(paths); i++ {
+		bar.Increment()
 		if strings.Index(paths[i], "._") != -1 {
 			continue
 		}
@@ -79,6 +87,7 @@ func main() {
 		flag = true
 		fullData = append(fullData, readCsv(paths[i], 1))
 	}
+	bar.Finish()
 
 	w := csv.NewWriter(outputFile)
 
