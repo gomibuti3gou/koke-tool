@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,12 +35,6 @@ func getFileName(name string) string {
 	res := filepath.Base(name)
 	fmt.Println(res)
 	return res
-}
-
-func getFileName2(name string) string {
-	res := strings.Split(name, "/")
-	fmt.Println("getFileName: " + res[len(res)-1])
-	return res[len(res)-1]
 }
 
 func getInfo(info string, data *exif.Exif) interface{} {
@@ -88,98 +81,84 @@ func SetLocate(name string) []string {
 	return photo
 }
 
-func setLatLng(name string, flag *bool) [][]string {
-	file, err := os.Open(name)
-	var photo [][]string
-	if *flag == false {
-		photo = append(photo, []string{"ImageName", "lat", "lng"})
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	x, err := exif.Decode(file)
-	if err != nil {
-		photo = append(photo, []string{getFileName(name), "0", "0"})
-		return photo
-	}
-	lat, lng, err := x.LatLong()
-	if err != nil {
-		photo = append(photo, []string{getFileName(name), "0", "0"})
-		return photo
-	}
-	photo = append(photo, []string{getFileName(name), strconv.FormatFloat(lat, 'f', 12, 64), strconv.FormatFloat(lng, 'f', 12, 64)})
-	fmt.Println(photo)
-	return photo
-}
-
-func P(t interface{}) string {
-	fmt.Println(reflect.TypeOf((t)))
-	return fmt.Sprintf("%s", reflect.TypeOf(t))
-}
-
 func change_type(value interface{}) string {
-	var res string
-	v := P(value)
-	fmt.Println(v)
-	switch v {
-	case "int":
+	res := ""
+	switch v := value.(type) {
+	case int:
 		res = fmt.Sprintf("%d", value)
-	case "float32":
+	case float32:
 		res = fmt.Sprintf("%f", value)
-	case "float64":
+	case float64:
 		res = fmt.Sprintf("%f", value)
-	case "string":
+	case string:
 		res = fmt.Sprintf("%s", value)
-	case "[]string":
+	case []string:
 		vv, _ := value.([]string)
 		res = strings.Join(vv, " ")
-	case "[]int":
+	case []int:
 		vv, _ := value.([]string)
 		res = strings.Join(vv, " ")
-	case "[]float64":
+	case []float64:
 		vv, _ := value.([]string)
 		res = strings.Join(vv, " ")
-	case "[]interface{}":
-		vv, _ := value.([]string)
-		res = strings.Join(vv, " ")
+	case []interface{}:
+		for _, v2 := range v {
+			v2_str := change_type(v2)
+			res += v2_str + ","
+		}
+		res = res[0 : len(res)-1]
 	default:
 		res = fmt.Sprint(value)
-		res = res[1 : len(res)-1]
 	}
 	return res
 }
-func allData(name string, label bool) ([]string, error) {
-	var photo []string
-	var key []string
+
+func exif_info(name string) (map[string]interface{}, error) {
+	var datas map[string]interface{}
 	file, err := os.Open(name)
 	if err != nil {
-		return photo, err
+		return datas, err
 	}
 	exif, err := exif.Decode(file)
 	if err != nil {
-		return photo, err
+		return datas, err
 	}
 	jdata, err := exif.MarshalJSON()
 	if err != nil {
-		return photo, err
+		return datas, err
 	}
 	var jsonObj interface{}
 	_ = json.Unmarshal(jdata, &jsonObj)
-	var datas = jsonObj.(map[string]interface{})
+	datas = jsonObj.(map[string]interface{})
 	fmt.Println(datas)
-	for k, _ := range datas {
-		key = append(key, k)
+	return datas, err
+}
+
+func getAllLabel(name string) ([]string, error) {
+	datas, err := exif_info(name)
+	var labels []string
+	if err != nil {
+		fmt.Println("fdjlsak")
+		return labels, err
 	}
-	if label {
-		sort.Strings(key)
-		key = append([]string{"ImageName"}, key...)
-		return key, err
+	for l, _ := range datas {
+		labels = append(labels, l)
 	}
-	sort.Strings(key)
-	for i := 0; i < len(key); i++ {
+	sort.Strings(labels)
+	labels = append([]string{"ImageName"}, labels...)
+	return labels, err
+}
+
+func allData(name string, labels []string) ([]string, error) {
+	var photo []string
+	datas, err := exif_info(name)
+	if err != nil {
+		return photo, err
+	}
+
+	for i := 1; i < len(labels); i++ {
 		var str string
-		str = change_type(datas[key[i]])
+		str = change_type(datas[labels[i]])
 		photo = append(photo, str)
 	}
 	photo = append([]string{getFileName(name)}, photo...)
@@ -225,8 +204,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//fmt.Printf("Current Folder %s \n", pwd)
-	//allData("/Users/oomorinichinichiki/Programs/Go/koke-tool/exif_csv/IMG_3567.jpeg", true)
 
 	var path string
 	if err != nil {
@@ -251,18 +228,19 @@ func main() {
 	var flag bool = true
 	fmt.Println("default or custom or all ??")
 	fmt.Scan(&seting)
+	fmt.Println(data[0])
 
 	if seting == "all" {
 		for _, d := range data {
 			if flag {
-				photo, err := allData(d, true)
+				labels, err := getAllLabel(d)
 				if err != nil {
 					continue
 				}
-				photos = append(photos, photo)
+				photos = append(photos, labels)
 				flag = false
 			}
-			photo, err := allData(d, false)
+			photo, err := allData(d, photos[0])
 			if err != nil {
 				continue
 			}
