@@ -145,6 +145,7 @@ func change_type(value interface{}) string {
 		res = strings.Join(vv, " ")
 	default:
 		res = fmt.Sprint(value)
+		res = res[1 : len(res)-1]
 	}
 	return res
 }
