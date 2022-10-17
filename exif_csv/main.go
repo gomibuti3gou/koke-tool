@@ -149,6 +149,27 @@ func getAllLabel(name string) ([]string, error) {
 	return labels, err
 }
 
+func getAllLabel2(paths []string) ([]string, error) {
+	array := make(map[string]bool)
+	var labels []string
+	var err error
+	for _, path := range paths {
+		datas, err := exif_info(path)
+		if err != nil {
+			continue
+		}
+		for l, _ := range datas {
+			if !array[l] {
+				array[l] = true
+				labels = append(labels, l)
+			}
+		}
+	}
+	sort.Strings(labels)
+	labels = append([]string{"ImageName"}, labels...)
+	return labels, err
+}
+
 func allData(name string, labels []string) ([]string, error) {
 	var photo []string
 	datas, err := exif_info(name)
@@ -231,12 +252,16 @@ func main() {
 	fmt.Println(data[0])
 
 	if seting == "all" {
+		labels, err := getAllLabel2(data)
+		if err != nil {
+			panic(err)
+		}
 		for _, d := range data {
 			if flag {
-				labels, err := getAllLabel(d)
+				/*labels, err := getAllLabel(d)
 				if err != nil {
 					continue
-				}
+				}*/
 				photos = append(photos, labels)
 				flag = false
 			}
